@@ -1,34 +1,117 @@
 #include <stdio.h>
+#include "esp_wifi.h"  // Funções do driver de Wi-Fi
+#include "nvs_flash.h" // Funções da NVS (área da flash que guarda dados e sobrevive ao reset)
+#include "esp_netif.h" // Camada de interface de rede (a pilha TCP/IP)
+#include "esp_event.h" // Sistema de eventos deo ESP-IDF
+#include "esp_err.h"   // Tipo esp_err_t e a macro ESP_ERROR_CHECK
+#include "esp_log.h"   // ESP_LOGI / ESP_LOGW para mensagens no monitor
+#include "mqtt_client.h" // API do cliente MQTT do ESP-IDF (componente esp-mqtt)
 
-#include "mqtt_client.h" // Componente para implementação do protocolo MQTT
-#include "esp_log.h" // Componente para ESP_LOG
+static const char* WIFI_TAG = "TAG = WIFI";
+static const char* MQTT_TAG = "TAG = MQTT";
 
-// Configurações do broker
-#define MQTT_BROKER_URI "mqtt://IP_DO_BROKER:PORTA"
-#define MQTT_USER "USER"
-#define MQTT_PASSWORD "PASSWORD"
+#define MQTT_URI "mqtt://ADDRESS:PORT" 	// protocolo + endereço + porta do broker
+#define MQTT_USER "USER" 			// usuário para identificação
+#define MQTT_PASS "PASSWORD" 			// senha da autenticação
+#define MQTT_CLIENT "espID" 				// identificador único do seu ESP32 no broker
 
-// TAG pro MQTT
-static const char* TAG_MQTT = "TAG = MQTT";
+static esp_mqtt_client_handle_t mqtt_client = NULL; // "identificador" do cliente; fica global para usarmos depois (publicar etc.)
 
-// O Handle é uma referência ao cliente MQTT.
-// Para que a gente acesse as funções do cliente por ele
-esp_mqtt_client_handle_t client = NULL;
+static void mqtt_app_init(void) {				// Função que monta o cliente
+    esp_mqtt_client_config_t mqtt_cfg = {			// Estrutura com todos os parâmetros do cliente
+	.broker.address.uri = MQTT_URI,				// onde está o broker
+	.credentials.username = MQTT_USER,			// usuário
+	.credentials.client_id = MQTT_CLIENT,			// id do cliente
+	.credentials.authentication.password = MQTT_PASS,	// senha
+    };
+    mqtt_client = esp_mqtt_client_init(&mqtt_cfg);		// Cria o cliente com essa configuração e devolve o identificador 
+}
 
-void mqtt_init(void) {
-    // Estrutura que armazena as configurações do cliente MQTT.
-    esp_mqtt_client_config_t mqtt_cfg = {
-	//Endereço e porta do broker
-	.broker.address.uri = MQTT_BROKER_URI,
+// Função chamada pelo ESP-IDF a cada evento do cliente MQTT
+static void mqtt_event_handler(void *handler_args,	// Argumento extra do registro (não usamos)
+				esp_event_base_t base,	// Família do evento (aqui, sempre MQTT)
+				int32_t event_id,	// qual evento aconteceu
+				void *event_data) {	// dados do evento
 
-	//Credenciais de autenticaçãoo do broker
-	.credentials.username = MQTT_USER,
-	.credentials.authentication.password = MQTT_PASSWORD
+    esp_mqtt_event_handle_t event = event_data; // Converte os dados genéricos para o tipo de evento MQTT
+	
+    if (event_id == MQTT_EVENT_CONNECTED) {						// Conectou ao broker
+	ESP_LOGI(MQTT_TAG, "Conectado ao broker.");					// Avisa no monitor
+	esp_mqtt_client_subscribe(mqtt_client, "/topic/func", 0);			// increve-se no tópico
+	esp_mqtt_client_publish(mqtt_client, "/topic/Func", "desligado", 0, 0, 0);	// publica mensagem inicial
+
+    } else if (event_id == MQTT_EVENT_DISCONNECTED) {		// Perdeu a conexão com o broker
+	ESP_LOGW(MQTT_TAG, "Desconectado do broker.");		// Só avisa no monitor (o cliente tenta reconectar sozinho)
+    
+    } else if (event_id == MQTT_EVENT_DATA) {				// Chegou uma mensagem de um tópico inscrito
+	printf("Topico: %.*s\n", event->topic_len, event->topic);	// Mostra o tópico
+	printf("Dados: %.*s\n", event->data_len, event->data);		// Mostra a mensagem
+    
+    } else if (event_id == MQTT_EVENT_ERROR) {		// Algo deu errado
+	ESP_LOGE(MQTT_TAG, "Erro no cliente MQTT");	// Log de erro
+    }
+
+    // Qualquer outra coisa cai aqui e não faz nada.
+}
+
+#define WIFI_SSID "ssid"
+#define WIFI_PASS "password" 
+
+// Função chamada pelo ESP-IDF toda vez que um evento registrado acontece
+static void wifi_event_handler(void *arg,			// Argumento extra que passamos no registro (não usamos)
+				esp_event_base_t event_base,	// "família" do evento: WIFI_EVENT ou IP_EVENT
+				int32_t event_id,		// Qual evento específico dessa família
+				void *event_data) {		// Dados do evento (ex.: o IP obtido)
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+	esp_wifi_connect();					//O wifi ligou, tenta conectaro ao SSID configurado
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+	ESP_LOGW(WIFI_TAG, "Desconectado. Tentando de novo...");	// Avisa que a conexão falhou ou caiu
+	esp_wifi_connect();						// Tenta conectar novamente
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+	ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data; 	// Converte os dados genéricos para o tipo "IP obtido"
+	ESP_LOGI(WIFI_TAG, "Conectado! IP: " IPSTR, IP2STR(&event->ip_info.ip)); // Mostra o IP no formato x.x.x.x
+	
+	if (mqtt_client == NULL) {		// Só entra na primeira vez que o wifi ganha ip
+	    mqtt_app_init();			// Cria o cliente MQTT e registra o handler
+	    esp_mqtt_client_start(mqtt_client);	// Inicia o cliente: conecta ao broker em segundo plano
+	}
+    }
+}
+
+void app_main(void) {
+    esp_err_t ret = nvs_flash_init(); // Tenta inicializar a NVS e guarda o código de retorno
+    // Se a NVS estiver cheia ou veio de uma versão antifa do IDF, ela não inicia
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+	ESP_ERROR_CHECK(nvs_flash_erase()); // Apaga a partição NVS inteira
+	ret = nvs_flash_init();		    // Tenta inicializar de novo, agora limpa
+    }
+    ESP_ERROR_CHECK(ret); // Se ainda houver erro, interrompe a execução aqui e exibe o erro
+    
+    ESP_ERROR_CHECK(esp_netif_init()); // Inicializa a pilha TCP/IP (IP, DHCP, Sockets)
+    
+    ESP_ERROR_CHECK(esp_event_loop_create_default()); // Cria a fila padrão que entrega os eventos do wifi
+    
+
+    esp_netif_create_default_wifi_sta(); // Cria a interface em modo de estação (cliente) e já prepara o DHCP para receber IP
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); // Monta a configuração padrão do driver (buffers, tarefas internas etc)
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));		 // Inicializa o driver com essa configuração
+    
+    wifi_config_t wifi_config = {   // Estrutura com os dados da rede
+	.sta = {		    // Bloco de configuração do modo estação
+	    .ssid = WIFI_SSID,      // Nome da rede que queremos acessar
+	    .password = WIFI_PASS,  // Senha da rede que queremos acessar
+	    .threshold.authmode = WIFI_AUTH_WPA2_PSK, // Só aceita redes com mínima segurança
+	},
     };
 
-    //Cria e inicializa uma instância do cliente MQTT
-    //A estruturamqtt_cfg é utilizada com configuração.
-    //
-    //O retorno é um handle que permite maipular esse cliente.
-    client = esp_mqtt_client_init(&mqtt_cfg);
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));			// Define o modo: estação (cliente), não ponto de acesso
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));	// Entrega o SSID e a SENHA ao driver
+
+    // Registra o handler para eventos de Wi-Fi (iniciou, desconectou...), qualquer  id
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
+    
+    // Registra o mesmo handler, só para o evento "ganhei um IP"
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
+
+    ESP_ERROR_CHECK(esp_wifi_start()); // Liga o wifi (dispara WIFI_EVENT_STA_START, que o handler já está esperando)
 }
