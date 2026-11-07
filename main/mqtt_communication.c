@@ -6,26 +6,25 @@
 #include "esp_err.h"   // Tipo esp_err_t e a macro ESP_ERROR_CHECK
 #include "esp_log.h"   // ESP_LOGI / ESP_LOGW para mensagens no monitor
 #include "mqtt_client.h" // API do cliente MQTT do ESP-IDF (componente esp-mqtt)
+#include <stdbool.h>
 
 static const char* WIFI_TAG = "TAG = WIFI";
 static const char* MQTT_TAG = "TAG = MQTT";
 
+#define WIFI_SSID "ssid"	// WIFI SSID
+#define WIFI_PASS "password"	// WIFI PASSWORD
+
 #define MQTT_URI "mqtt://ADDRESS:PORT" 	// protocolo + endereço + porta do broker
-#define MQTT_USER "USER" 			// usuário para identificação
-#define MQTT_PASS "PASSWORD" 			// senha da autenticação
-#define MQTT_CLIENT "espID" 				// identificador único do seu ESP32 no broker
+#define MQTT_USER "USERNAME" 			// usuário para identificação
+#define MQTT_PASS "USER_PASSWORD" 			// senha da autenticação
+#define MQTT_CLIENT "esp32ID" 				// identificador único do seu ESP32 no broker
+
+#define TOPIC_LED "/mytopic/LED"		// Define o tópico para o LED
+#define TOPIC_BOTAO "/mytopic/BOTAO"	// Define o tópico para o BOTAO
 
 static esp_mqtt_client_handle_t mqtt_client = NULL; // "identificador" do cliente; fica global para usarmos depois (publicar etc.)
-
-static void mqtt_app_init(void) {				// Função que monta o cliente
-    esp_mqtt_client_config_t mqtt_cfg = {			// Estrutura com todos os parâmetros do cliente
-	.broker.address.uri = MQTT_URI,				// onde está o broker
-	.credentials.username = MQTT_USER,			// usuário
-	.credentials.client_id = MQTT_CLIENT,			// id do cliente
-	.credentials.authentication.password = MQTT_PASS,	// senha
-    };
-    mqtt_client = esp_mqtt_client_init(&mqtt_cfg);		// Cria o cliente com essa configuração e devolve o identificador 
-}
+	    
+static volatile bool mqtt_conectado = false;	// true somente enquanto o estiver conectado ao broker
 
 // Função chamada pelo ESP-IDF a cada evento do cliente MQTT
 static void mqtt_event_handler(void *handler_args,	// Argumento extra do registro (não usamos)
@@ -36,11 +35,13 @@ static void mqtt_event_handler(void *handler_args,	// Argumento extra do registr
     esp_mqtt_event_handle_t event = event_data; // Converte os dados genéricos para o tipo de evento MQTT
 	
     if (event_id == MQTT_EVENT_CONNECTED) {						// Conectou ao broker
+	mqtt_conectado = true;
 	ESP_LOGI(MQTT_TAG, "Conectado ao broker.");					// Avisa no monitor
-	esp_mqtt_client_subscribe(mqtt_client, "/topic/func", 0);			// increve-se no tópico
-	esp_mqtt_client_publish(mqtt_client, "/topic/Func", "desligado", 0, 0, 0);	// publica mensagem inicial
+	esp_mqtt_client_subscribe(mqtt_client, TOPIC_LED, 0);				// increve-se no tópico
+	esp_mqtt_client_publish(mqtt_client, TOPIC_BOTAO, "desligado", 0, 0, 0);	// publica mensagem inicial
 
     } else if (event_id == MQTT_EVENT_DISCONNECTED) {		// Perdeu a conexão com o broker
+	mqtt_conectado = false;
 	ESP_LOGW(MQTT_TAG, "Desconectado do broker.");		// Só avisa no monitor (o cliente tenta reconectar sozinho)
     
     } else if (event_id == MQTT_EVENT_DATA) {				// Chegou uma mensagem de um tópico inscrito
@@ -54,8 +55,18 @@ static void mqtt_event_handler(void *handler_args,	// Argumento extra do registr
     // Qualquer outra coisa cai aqui e não faz nada.
 }
 
-#define WIFI_SSID "ssid"
-#define WIFI_PASS "password" 
+static void mqtt_app_init(void) {				// Função que monta o cliente
+    esp_mqtt_client_config_t mqtt_cfg = {			// Estrutura com todos os parâmetros do cliente
+	.broker.address.uri = MQTT_URI,				// onde está o broker
+	.credentials.username = MQTT_USER,			// usuário
+	.credentials.client_id = MQTT_CLIENT,			// id do cliente
+	.credentials.authentication.password = MQTT_PASS,	// senha
+    };
+    mqtt_client = esp_mqtt_client_init(&mqtt_cfg);		// Cria o cliente com essa configuração e devolve o identificador 
+
+    // Liga o handler a todos os eventos do cliente; Sem isso, nenhum evento chega nele
+    esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+}
 
 // Função chamada pelo ESP-IDF toda vez que um evento registrado acontece
 static void wifi_event_handler(void *arg,			// Argumento extra que passamos no registro (não usamos)
