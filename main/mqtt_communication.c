@@ -7,6 +7,7 @@
 #include "esp_log.h"   // ESP_LOGI / ESP_LOGW para mensagens no monitor
 #include "mqtt_client.h" // API do cliente MQTT do ESP-IDF (componente esp-mqtt)
 #include <stdbool.h>
+#include <string.h>
 
 static const char* WIFI_TAG = "TAG = WIFI";
 static const char* MQTT_TAG = "TAG = MQTT";
@@ -19,12 +20,21 @@ static const char* MQTT_TAG = "TAG = MQTT";
 #define MQTT_PASS "USER_PASSWORD" 			// senha da autenticação
 #define MQTT_CLIENT "esp32ID" 				// identificador único do seu ESP32 no broker
 
-#define TOPIC_LED "/mytopic/LED"		// Define o tópico para o LED
-#define TOPIC_BOTAO "/mytopic/BOTAO"	// Define o tópico para o BOTAO
+#define TOPIC_LEDtemp "/TOPIC/LEDtemp"		// Define o tópico para o LED
+#define TOPIC_LEDumid "/TOPIC/LEDumid"		// Define o tópico para o LED
+#define TOPIC_LEDpir "/TOPIC/LEDpir"		// Define o tópico para o LED
+
+#define TOPIC_TEMP "/TOPIC/TEMP"		// Define o tópico para a temperatura
+#define TOPIC_UMID "/TOPIC/UMID"		// Define o tópico para a umidade
+#define TOPIC_PIR "/TOPIC/PIR"			// Define o tópico para o PIR
 
 static esp_mqtt_client_handle_t mqtt_client = NULL; // "identificador" do cliente; fica global para usarmos depois (publicar etc.)
 	    
 static volatile bool mqtt_conectado = false;	// true somente enquanto o estiver conectado ao broker
+
+static bool topico_igual (esp_mqtt_event_handle_t event, const char* topico) {	// Retorna se o tópico do evento é igual ao tópico dado como parâmetro
+    return (event->topic_len == strlen(topico)) && (strncmp(event->topic, topico, event->topic_len) == 0);
+}
 
 // Função chamada pelo ESP-IDF a cada evento do cliente MQTT
 static void mqtt_event_handler(void *handler_args,	// Argumento extra do registro (não usamos)
@@ -37,8 +47,14 @@ static void mqtt_event_handler(void *handler_args,	// Argumento extra do registr
     if (event_id == MQTT_EVENT_CONNECTED) {						// Conectou ao broker
 	mqtt_conectado = true;
 	ESP_LOGI(MQTT_TAG, "Conectado ao broker.");					// Avisa no monitor
-	esp_mqtt_client_subscribe(mqtt_client, TOPIC_LED, 0);				// increve-se no tópico
-	esp_mqtt_client_publish(mqtt_client, TOPIC_BOTAO, "desligado", 0, 0, 0);	// publica mensagem inicial
+
+	esp_mqtt_client_subscribe(mqtt_client, TOPIC_LEDtemp, 0);				// increve-se no tópico da temperatura
+	esp_mqtt_client_subscribe(mqtt_client, TOPIC_LEDumid, 0);				// increve-se no tópico da umidade
+	esp_mqtt_client_subscribe(mqtt_client, TOPIC_LEDpir, 0);				// increve-se no tópico do pir
+
+	esp_mqtt_client_publish(mqtt_client, TOPIC_TEMP, "desligado", 0, 0, 0);	// publica mensagem inicial
+	esp_mqtt_client_publish(mqtt_client, TOPIC_UMID, "desligado", 0, 0, 0);	// publica mensagem inicial
+	esp_mqtt_client_publish(mqtt_client, TOPIC_PIR, "desligado", 0, 0, 0);	// publica mensagem inicial
 
     } else if (event_id == MQTT_EVENT_DISCONNECTED) {		// Perdeu a conexão com o broker
 	mqtt_conectado = false;

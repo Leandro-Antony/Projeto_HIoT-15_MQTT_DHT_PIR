@@ -3,8 +3,6 @@
 #include "esp_rom_sys.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_timer.h"
-#include "esp_log.h"
 
 #define PIN_PIR GPIO_NUM_26 // PIR conectado na GPIO26
 
