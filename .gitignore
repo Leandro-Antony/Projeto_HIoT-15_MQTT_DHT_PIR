@@ -4,4 +4,5 @@ sdkconfig
 sdkconfig.old
 
 main/main_working.c
+main/CMakeLists.txt
 node-red_flow/flows_working.json
