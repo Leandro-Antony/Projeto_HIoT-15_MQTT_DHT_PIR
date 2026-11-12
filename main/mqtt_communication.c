@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "esp_wifi.h"  // Funções do driver de Wi-Fi
+#include "esp_wifi_types_generic.h"
 #include "nvs_flash.h" // Funções da NVS (área da flash que guarda dados e sobrevive ao reset)
 #include "esp_netif.h" // Camada de interface de rede (a pilha TCP/IP)
 #include "esp_event.h" // Sistema de eventos deo ESP-IDF
@@ -15,10 +16,10 @@ static const char* MQTT_TAG = "TAG = MQTT";
 #define WIFI_SSID "ssid"	// WIFI SSID
 #define WIFI_PASS "password"	// WIFI PASSWORD
 
-#define MQTT_URI "mqtt://ADDRESS:PORT" 	// protocolo + endereço + porta do broker
-#define MQTT_USER "USERNAME" 			// usuário para identificação
-#define MQTT_PASS "USER_PASSWORD" 			// senha da autenticação
-#define MQTT_CLIENT "esp32ID" 				// identificador único do seu ESP32 no broker
+#define MQTT_URI "mqtt://ip_address:port" 	// protocolo + endereço + porta do broker
+#define MQTT_USER "username" 			// usuário para identificação
+#define MQTT_PASS "user_passw" 			// senha da autenticação
+#define MQTT_CLIENT "esp32IDa1b2c3" 				// identificador único do seu ESP32 no broker
 
 #define TOPIC_LEDtemp "/TOPIC/LEDtemp"		// Define o tópico para o LED
 #define TOPIC_LEDumid "/TOPIC/LEDumid"		// Define o tópico para o LED
@@ -127,7 +128,8 @@ void app_main(void) {
 	.sta = {		    // Bloco de configuração do modo estação
 	    .ssid = WIFI_SSID,      // Nome da rede que queremos acessar
 	    .password = WIFI_PASS,  // Senha da rede que queremos acessar
-	    .threshold.authmode = WIFI_AUTH_WPA2_PSK, // Só aceita redes com mínima segurança
+	    // Use seu modo de autenticação da sua rede
+	    .threshold.authmode = WIFI_AUTH_WPA_PSK, // Só aceita redes com mínima segurança
 	},
     };
 
