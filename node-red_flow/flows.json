@@ -1,8 +1,16 @@
 [
     {
-        "id": "686293eb87d69543",
+        "id": "988155ad5e6c7aec",
+        "type": "tab",
+        "label": "Fluxo 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "42b3ddeea854d2df",
         "type": "mqtt in",
-        "z": "d7b613519a3c46e6",
+        "z": "988155ad5e6c7aec",
         "name": "In /temperatura",
         "topic": "/ESP32/TOPIC/temperatura",
         "qos": "0",
@@ -15,17 +23,324 @@
         "y": 340,
         "wires": [
             [
-                "28e6e1edfc2b565a",
-                "0a3ecc539e8722a6"
+                "08996ba787d79856",
+                "fef645d876c03c74"
             ]
         ]
     },
     {
+        "id": "f4285eb959820803",
+        "type": "mqtt in",
+        "z": "988155ad5e6c7aec",
+        "name": "In /umidade",
+        "topic": "/ESP32/TOPIC/umidade",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "broker_config_imd",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 510,
+        "y": 460,
+        "wires": [
+            [
+                "c7a9b009bc1d99f4",
+                "9be0f4b6d07ed944"
+            ]
+        ]
+    },
+    {
+        "id": "8c6ecbae1a580f17",
+        "type": "mqtt in",
+        "z": "988155ad5e6c7aec",
+        "name": "In /presenca",
+        "topic": "/ESP32/TOPIC/presenca",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "broker_config_imd",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 510,
+        "y": 580,
+        "wires": [
+            [
+                "28e0fe44a8622271",
+                "c69a522c6ac3918c"
+            ]
+        ]
+    },
+    {
+        "id": "08996ba787d79856",
+        "type": "function",
+        "z": "988155ad5e6c7aec",
+        "name": "Regra Temp",
+        "func": "let t = parseFloat(msg.payload);\nlet alerta = null;\nlet led = '0';\n\nif (t < 20) {\n    alerta = { payload: 'ALERTA: Temperatura Baixa (' + t.toFixed(1) + ' °C)' };\n    led = '1';\n} else if (t >= 25) {\n    alerta = { payload: 'ALERTA: Temperatura Alta (' + t.toFixed(1) + ' °C)' };\n    led = '1';\n}\n\nreturn [alerta, { payload: led }];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 340,
+        "wires": [
+            [
+                "c7dfed42817a742f"
+            ],
+            [
+                "e66f99704b48e576"
+            ]
+        ]
+    },
+    {
+        "id": "c7a9b009bc1d99f4",
+        "type": "function",
+        "z": "988155ad5e6c7aec",
+        "name": "Regra Umidade",
+        "func": "let h = parseFloat(msg.payload);\nlet alerta = null;\nlet led = '0';\n\nif (h > 50) {\n    alerta = { payload: 'ALERTA: Umidade Elevada (' + h.toFixed(1) + '%)' };\n    led = '1';\n}\n\nreturn [alerta, { payload: led }];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 460,
+        "wires": [
+            [
+                "c7dfed42817a742f"
+            ],
+            [
+                "a50867b7a1eb2dde"
+            ]
+        ]
+    },
+    {
+        "id": "28e0fe44a8622271",
+        "type": "function",
+        "z": "988155ad5e6c7aec",
+        "name": "Regra PIR",
+        "func": "let p = parseInt(msg.payload);\nlet alerta = null;\nlet led = '0';\n\nif (p === 1) {\n    alerta = { payload: 'ALERTA: Movimento detectado no ambiente!' };\n    led = '1';\n}\n\nreturn [alerta, { payload: led }];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 580,
+        "wires": [
+            [
+                "c7dfed42817a742f"
+            ],
+            [
+                "33d1b5a6d634290f"
+            ]
+        ]
+    },
+    {
+        "id": "fef645d876c03c74",
+        "type": "ui-gauge",
+        "z": "988155ad5e6c7aec",
+        "name": "Temperatura",
+        "group": "d28e0b28cacb7a20",
+        "order": 1,
+        "value": "payload",
+        "valueType": "msg",
+        "width": 3,
+        "height": 3,
+        "gtype": "gauge",
+        "title": "Temperatura (°C)",
+        "alwaysShowTitle": false,
+        "units": "",
+        "icon": "",
+        "prefix": "",
+        "suffix": "",
+        "segments": [
+            {
+                "from": "0",
+                "color": "#0227de",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "20",
+                "color": "#3dde02",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "25",
+                "color": "#de0223",
+                "text": "",
+                "textType": "label"
+            }
+        ],
+        "min": 0,
+        "max": 50,
+        "sizeThickness": "",
+        "sizeGap": "",
+        "sizeKeyThickness": "",
+        "className": "",
+        "x": 750,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "9be0f4b6d07ed944",
+        "type": "ui-gauge",
+        "z": "988155ad5e6c7aec",
+        "name": "Umidade",
+        "group": "d28e0b28cacb7a20",
+        "order": 2,
+        "value": "payload",
+        "valueType": "msg",
+        "width": 3,
+        "height": 3,
+        "gtype": "gauge",
+        "title": "Umidade (%)",
+        "alwaysShowTitle": false,
+        "units": "",
+        "icon": "",
+        "prefix": "",
+        "suffix": "",
+        "segments": [
+            {
+                "from": "0",
+                "color": "#008000",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "50",
+                "color": "#ff0000",
+                "text": "",
+                "textType": "label"
+            }
+        ],
+        "min": 0,
+        "max": 100,
+        "sizeThickness": "",
+        "sizeGap": "",
+        "sizeKeyThickness": "",
+        "className": "",
+        "x": 750,
+        "y": 420,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c69a522c6ac3918c",
+        "type": "ui-text",
+        "z": "988155ad5e6c7aec",
+        "group": "d28e0b28cacb7a20",
+        "order": 3,
+        "width": 6,
+        "height": 1,
+        "name": "Status Presença",
+        "label": "Sensor de Movimento: ",
+        "format": "{{msg.payload == 1 ? 'Detectado' : 'Livre'}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 760,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "c7dfed42817a742f",
+        "type": "ui-notification",
+        "z": "988155ad5e6c7aec",
+        "ui": "9ed06f8333a3385e",
+        "position": "top right",
+        "colorDefault": false,
+        "color": "#d32f2f",
+        "displayTime": "3500",
+        "showCountdown": false,
+        "outputs": 1,
+        "allowDismiss": false,
+        "dismissText": "",
+        "allowConfirm": false,
+        "confirmText": "",
+        "raw": false,
+        "className": "",
+        "name": "Pop-up de Alerta",
+        "x": 1010,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "e66f99704b48e576",
+        "type": "mqtt out",
+        "z": "988155ad5e6c7aec",
+        "name": "Led1 (Temp)",
+        "topic": "/ESP32/TOPIC/temp",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "broker_config_imd",
+        "x": 1000,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "a50867b7a1eb2dde",
+        "type": "mqtt out",
+        "z": "988155ad5e6c7aec",
+        "name": "Led2 (Umid)",
+        "topic": "/ESP32/TOPIC/umid",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "broker_config_imd",
+        "x": 1000,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "33d1b5a6d634290f",
+        "type": "mqtt out",
+        "z": "988155ad5e6c7aec",
+        "name": "Led3 (Presença)",
+        "topic": "/ESP32/TOPIC/presenca",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "broker_config_imd",
+        "x": 1020,
+        "y": 600,
+        "wires": []
+    },
+    {
         "id": "broker_config_imd",
         "type": "mqtt-broker",
-        "name": "Broker Mosquitto ",
-        "broker": "yourIP",
-        "port": "port",
+        "name": "Broker Mosquitto",
+        "broker": "0.0.0.0",
+        "port": "0000",
         "clientid": "NodeRED_Server_Client",
         "autoConnect": true,
         "usetls": false,
@@ -47,5 +362,97 @@
         "willMsg": {},
         "userProps": "",
         "sessionExpiry": ""
+    },
+    {
+        "id": "d28e0b28cacb7a20",
+        "type": "ui-group",
+        "name": "Sensores e Alertas",
+        "page": "8f9a9f28696d081d",
+        "width": "6",
+        "height": "1",
+        "order": 1
+    },
+    {
+        "id": "9ed06f8333a3385e",
+        "type": "ui-base",
+        "name": "Monitoramento IoT IMD",
+        "path": "/dashboard",
+        "appIcon": "",
+        "includeClientData": true,
+        "acceptsClientConfig": [
+            "ui-notification",
+            "ui-control"
+        ],
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 5,
+        "showDisconnectNotification": true,
+        "allowInstall": true
+    },
+    {
+        "id": "8f9a9f28696d081d",
+        "type": "ui-page",
+        "name": "Home",
+        "ui": "9ed06f8333a3385e",
+        "path": "/home",
+        "icon": "home",
+        "layout": "grid",
+        "theme": "fcf1267cde1f0497",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": "0",
+                "cols": "3"
+            },
+            {
+                "name": "Tablet",
+                "px": "576",
+                "cols": "6"
+            },
+            {
+                "name": "Small Desktop",
+                "px": "768",
+                "cols": "9"
+            },
+            {
+                "name": "Desktop",
+                "px": "1024",
+                "cols": "12"
+            }
+        ],
+        "tabs": [],
+        "order": 1,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "fcf1267cde1f0497",
+        "type": "ui-theme",
+        "name": "Theme Name",
+        "colors": {
+            "surface": "#fcfcfd",
+            "primary": "#0d74ce",
+            "bgPage": "#f9f9fb",
+            "groupBg": "#ffffff",
+            "groupOutline": "#d9d9e0"
+        },
+        "sizes": {
+            "density": "default",
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "4px",
+            "widgetGap": "12px"
+        }
+    },
+    {
+        "id": "2e690b6e00c93e59",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@flowfuse/node-red-dashboard": "1.36.0"
+        }
     }
 ]
