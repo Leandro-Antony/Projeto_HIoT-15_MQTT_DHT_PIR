@@ -10,6 +10,8 @@
 
 Projeto de laboratório para ESP32 que combina **leitura de dados**, **criação de Tasks**, **conexão Wi-Fi**, **comunicação via protocolo MQTT** e **controle de fluxo no `Node-Red`** em um único Projeto. O ESP32 realiza a leitura dos sensores **HC-SR501** e **DHT11** através de **Tasks** individuais criadas para uma medição assíncrona, e que com base nos dados obtidos, publica os dados em um tópico específico via protocolo **MQTT** para um broker, o **Node-Red** devidamente configurado e inscrito nos tópicos recebe os dados, faz a análise e toma uma decisão de criar um alerta sobre o dado de **temperatura**, **umidade** ou **movimento detectado**, emitindo um alerta no dashboard do Node-Red e enviando `0/1` de volta para o broker para que o ESP32 possa receber a ação a tomar, se deve acender o LED ou não correspondente ao alerta.  
 
+Link para vídeo demonstrativo no youtube: https://www.youtube.com/watch?v=DWntVKF-mXs
+
 ## Sumário
 
 - [Funcionalidades](#funcionalidades)
