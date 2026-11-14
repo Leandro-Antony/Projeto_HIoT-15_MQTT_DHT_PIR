@@ -25,6 +25,7 @@ static const char* MQTT_TAG = "TAG = MQTT";
 #define PIN_LED_UMID GPIO_NUM_33
 #define PIN_LED_PIR GPIO_NUM_25
 
+// Configurações de conexão
 #define WIFI_SSID "SSID"	// WIFI SSID
 #define WIFI_PASS "PASSWORD"	// WIFI PASSWORD
 
@@ -33,10 +34,12 @@ static const char* MQTT_TAG = "TAG = MQTT";
 #define MQTT_PASS "USER_PASSW" 				// senha da autenticação
 #define MQTT_CLIENT "esp_iot_id" 			// identificador único do seu ESP32 no broker
 
+// Topicos de leitura do ESP32
 #define TOPIC_LEDtemp "/ESP32/TOPIC/temp"			// Define o tópico para o LED
 #define TOPIC_LEDumid "/ESP32/TOPIC/umid"			// Define o tópico para o LED
 #define TOPIC_LEDpir "/ESP32/TOPIC/presenca"			// Define o tópico para o LED
 
+// Tópicos de publicação do ESP32
 #define TOPIC_TEMP "/ESP32/TOPIC/temperatura"		// Define o tópico para a temperatura
 #define TOPIC_UMID "/ESP32/TOPIC/umidade"			// Define o tópico para a umidade
 #define TOPIC_PIR "/ESP32/TOPIC/presenca"			// Define o tópico para o PIR
